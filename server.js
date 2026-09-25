@@ -1,10 +1,14 @@
-const http = require('http');
+// 💡 正しいインポート（require）部分
+const express = require('express');
+const Unblocker = require('unblocker');
+const app = express();
 
-// Renderが自動で割り当てるポート番号
-const port = process.env.PORT || 3000;
+// プロキシの基本設定
+const unblocker = new Unblocker({ prefix: '/proxy/' });
+app.use(unblocker);
 
-const server = http.createServer((req, res) => {
-    // Renderの【環境変数 PROXY_HTML】からHTMLコードを読み取って表示する
+// 1. フロントエンド画面：環境変数「PROXY_HTML」の値をそのまま読み取って表示する
+app.get('/', (req, res) => {
     const htmlContent = process.env.PROXY_HTML || `
         <!DOCTYPE html>
         <html>
@@ -15,11 +19,16 @@ const server = http.createServer((req, res) => {
         </body>
         </html>
     `;
-
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(htmlContent);
+    res.send(htmlContent);
 });
 
-server.listen(port, () => {
-    console.log(`Render Frontend Server successfully running on port ${port}`);
+// Renderが自動で割り当てるポート番号で起動
+const port = process.env.PORT || 3000;
+const server = app.listen(port, () => {
+    console.log(`Render Unblocker Backend running on port ${port}`);
+});
+
+// YouTubeなどの動画サイトの読み書き（WebSocket通信）を中継するための設定
+server.on('upgrade', (request, socket, head) => {
+    unblocker.onUpgrade(request, socket, head);
 });
